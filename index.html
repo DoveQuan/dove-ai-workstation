@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>FREDDIE'S AI ART - 游戏场景分析 Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap');
+        
+        /* 基础与背景设定 */
+        body { 
+            font-family: 'Inter', system-ui, -apple-system, sans-serif; 
+            background-color: #0B0F19; 
+            color: #e2e8f0; 
+            background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* 极致的滚动条美化 */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #8b5cf6; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* 面板质感 (玻璃态) */
+        .glass-panel { 
+            background: rgba(15, 23, 42, 0.6); 
+            backdrop-filter: blur(20px); 
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.06); 
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        /* 标签页动画与样式 */
+        .tab-content { display: none; opacity: 0; transform: translateY(10px); transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .tab-content.active { display: flex; flex-direction: column; opacity: 1; transform: translateY(0); }
+        
+        .tab-btn { 
+            color: #64748b; transition: all 0.3s; padding: 0.6rem 1rem; border-radius: 0.5rem; font-weight: 500; font-size: 0.875rem;
+            border: 1px solid transparent;
+        }
+        .tab-btn:hover { color: #cbd5e1; background: rgba(255,255,255,0.03); }
+        .tab-btn.active { 
+            color: #fff; 
+            background: rgba(139, 92, 246, 0.15); 
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            box-shadow: inset 0 0 12px rgba(139, 92, 246, 0.1);
+        }
+
+        /* 动画与组件 */
+        .loader { border: 2px solid rgba(255,255,255,0.1); border-top: 2px solid #fff; border-radius: 50%; width: 16px; height: 16px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 8px;}
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        canvas { max-width: 100%; height: auto; }
+        
+        /* 极致排版引擎 CSS */
+        .markdown-body { color: #cbd5e1; font-size: 0.95rem; line-height: 1.8; letter-spacing: 0.01em; }
+        .markdown-body strong { color: #fff; font-weight: 600; background: linear-gradient(to right, rgba(139,92,246,0.2), transparent); padding: 0.1rem 0.4rem; border-radius: 4px; margin: 0 0.1rem; border-left: 2px solid #8b5cf6; }
+        
+        .markdown-card { 
+            background: rgba(15, 23, 42, 0.6); 
+            border: 1px solid rgba(255,255,255,0.08); 
+            border-radius: 0.75rem; 
+            padding: 1.5rem; 
+            margin-bottom: 1.25rem; 
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); 
+            transition: all 0.3s ease; 
+        }
+        .markdown-card:hover { border-color: rgba(139, 92, 246, 0.5); background: rgba(15, 23, 42, 0.9); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(139, 92, 246, 0.15); }
+        .markdown-card h2 { font-size: 1.15rem; font-weight: 700; color: #f8fafc; margin-bottom: 1rem; padding-bottom: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; }
+        .markdown-card h3 { font-size: 1rem; font-weight: 600; color: #c4b5fd; margin-top: 1.2rem; margin-bottom: 0.6rem; display: flex; align-items: center; }
+        .markdown-card h3::before { content: ''; display: inline-block; width: 3px; height: 12px; background: #8b5cf6; margin-right: 8px; border-radius: 2px; }
+        .markdown-card p { margin-bottom: 1rem; }
+        .markdown-card p:last-child { margin-bottom: 0; }
+        .markdown-card ul, .markdown-card ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+        .markdown-card li { margin-bottom: 0.5rem; padding-left: 0.25rem; color: #94a3b8;}
+        .markdown-card li::marker { color: #8b5cf6; }
+
+        /* 输入框与按钮美化 */
+        .pro-input { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); transition: all 0.3s; }
+        .pro-input:focus { outline: none; border-color: #8b5cf6; box-shadow: 0 0 0 2px rgba(139,92,246,0.2); }
+        
+        .btn-primary { background: linear-gradient(135deg, #7c3aed, #6d28d9); border: 1px solid rgba(255,255,255,0.1); transition: all 0.3s; }
+        .btn-primary:hover:not(:disabled) { box-shadow: 0 0 20px rgba(124,58,237,0.4); transform: translateY(-1px); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* 下拉列表深度美化 */
+        select.custom-select {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1.2rem;
+            padding-right: 2.5rem;
+            cursor: pointer;
+            text-overflow: ellipsis;
+        }
+        select.custom-select:focus {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%238b5cf6'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+        }
+        select.custom-select option {
+            background-color: #0f172a !important; 
+            color: #cbd5e1 !important; 
+            padding: 10px;
+        }
+        select.custom-select optgroup {
+            background-color: #020617 !important; 
+            color: #8b5cf6 !important; 
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col">
+
+    <!-- 顶部导航栏 -->
+    <header class="shrink-0 h-20 border-b border-white/5 flex items-center px-8 bg-[#0B0F19]/90 backdrop-blur-md z-10 justify-between shadow-md">
+        <div class="flex items-center gap-5">
+            <div class="relative flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 shadow-[0_0_20px_rgba(139,92,246,0.25)] overflow-hidden group">
+                <div class="absolute inset-0 bg-gradient-to-tr from-violet-600/30 to-cyan-500/30 opacity-60 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <svg class="w-[26px] h-[26px] text-white relative z-10 drop-shadow-lg group-hover:scale-105 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="12" cy="12" r="2.5" fill="currentColor"/>
+                    <path d="M12 2v7.5 M12 22v-7.5 M2 8.5l7 4 M22 8.5l-7 4 M2 15.5l7-4 M22 15.5l-7-4" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
+                </svg>
+            </div>
+            <div class="flex flex-col justify-center">
+                <h1 class="text-[24px] font-black tracking-tight flex items-center gap-2.5 leading-none">
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-300 drop-shadow-sm">FREDDIE'S</span>
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-cyan-400 drop-shadow-[0_0_10px_rgba(139,92,246,0.4)]">AI WORKSTATION</span>
+                </h1>
+                <p class="text-slate-400 text-[10px] font-semibold uppercase tracking-[0.25em] mt-1.5">Professional Game Scene Analysis</p>
+            </div>
+        </div>
+        <div class="text-[11px] font-medium text-slate-500 flex items-center gap-2 bg-slate-900/50 px-3 py-1.5 rounded-full border border-slate-800">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
+            Local Environment Active
+        </div>
+    </header>
+
+    <!-- 主工作区 -->
+    <main class="flex-1 flex overflow-hidden p-6 gap-6 max-w-[2560px] mx-auto w-full">
+        
+        <!-- 左侧栏：配置与上传 -->
+        <aside class="w-[360px] flex flex-col gap-6 shrink-0 h-full relative">
+            <div class="glass-panel p-5 rounded-xl shrink-0">
+                <div class="flex items-center gap-2 mb-4 border-b border-white/5 pb-3">
+                    <span class="text-violet-400">🔑</span>
+                    <h3 class="font-bold text-xs text-slate-300 uppercase tracking-wider">Engine Config</h3>
+                </div>
+                <div class="space-y-3">
+                    <input type="password" id="api-key" class="w-full p-2.5 rounded-lg pro-input text-sm" placeholder="Input Gemini API Key...">
+                    <button id="btn-load-models" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2.5 rounded-lg text-sm text-slate-200 transition font-medium">
+                        加载云端模型
+                    </button>
+                    <!-- 动态文本模型 -->
+                    <div class="flex flex-col gap-1.5 pt-1">
+                        <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wide px-1 flex items-center gap-1.5"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> Text & Vision Model</label>
+                        <select id="model-select" class="w-full p-2.5 rounded-lg pro-input text-sm text-slate-300 custom-select">
+                            <option value="" disabled selected hidden>请先加载模型列表...</option>
+                        </select>
+                    </div>
+                    <!-- 动态图像模型 -->
+                    <div class="flex flex-col gap-1.5 pt-1">
+                        <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wide px-1 flex items-center gap-1.5"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg> Image Generation</label>
+                        <select id="img-model-select" class="w-full p-2.5 rounded-lg pro-input text-sm text-slate-300 custom-select">
+                            <option value="" disabled selected hidden>请先加载模型列表...</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div id="drop-zone" class="glass-panel flex-1 rounded-xl flex items-center justify-center cursor-pointer border-2 border-dashed border-slate-700/50 hover:border-violet-500/80 transition-all relative overflow-hidden group">
+                <div id="upload-txt" class="text-sm text-slate-400 flex flex-col items-center pointer-events-none group-hover:text-violet-400 transition-colors z-10 p-6 text-center">
+                    <div class="w-14 h-14 rounded-full bg-slate-800/50 flex items-center justify-center mb-4 group-hover:bg-violet-900/30 group-hover:scale-110 transition-transform">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    </div>
+                    <span class="font-medium text-slate-300 mb-1">拖入或粘贴游戏画面</span>
+                    <span class="text-xs text-slate-500">支持 JPG, PNG (Max 1024px)</span>
+                </div>
+                <div class="absolute inset-0 bg-black/60 z-0"></div>
+                <img id="preview" class="hidden absolute inset-0 w-full h-full object-contain backdrop-blur-sm z-0">
+                <input type="file" id="file-input" class="hidden" accept="image/*">
+            </div>
+
+            <footer class="glass-panel rounded-xl p-4 shrink-0 text-center flex flex-col gap-2.5 mt-auto">
+                <p class="text-[11px] text-slate-500 flex items-center justify-center gap-1.5 font-medium">
+                    <svg class="w-3.5 h-3.5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                    数据直连 Google API · 本地侧渲染
+                </p>
+                <div class="w-full h-px bg-slate-700/50"></div>
+                <a href="mailto:freddiechan255@gmail.com" class="group flex items-center justify-center gap-2 text-[12px] text-slate-400 hover:text-white transition-colors cursor-pointer py-1">
+                    <svg class="w-4 h-4 group-hover:text-violet-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                    <span class="font-mono tracking-wide">freddiechan255@gmail.com</span>
+                </a>
+            </footer>
+        </aside>
+
+        <!-- 右侧主面板 -->
+        <section class="flex-1 glass-panel rounded-xl flex flex-col overflow-hidden min-w-0">
+            <div class="flex gap-2 p-3 bg-black/20 border-b border-white/5 overflow-x-auto shrink-0 scrollbar-hide">
+                <button class="tab-btn active" onclick="switchTab('tab-analysis')">🤖 深度解析框架</button>
+                <div class="w-px h-6 bg-slate-800 my-auto mx-1"></div>
+                <button class="tab-btn" onclick="switchTab('tab-gray')">⚫ 明度层级诊断</button>
+                <button class="tab-btn" onclick="switchTab('tab-color')">🎨 色彩情绪网络</button>
+                <button class="tab-btn" onclick="switchTab('tab-comp')">📐 几何构图骨架</button>
+                <button class="tab-btn" onclick="switchTab('tab-abstract')">👤 轮廓形态抽象</button>
+                <div class="w-px h-6 bg-slate-800 my-auto mx-1"></div>
+                <button class="tab-btn" onclick="switchTab('tab-edit')">🖌️ AI 重构推演</button>
+            </div>
+
+            <div class="flex-1 overflow-hidden p-6 relative">
+                
+                <!-- 1. AI Analysis -->
+                <div id="tab-analysis" class="tab-content active h-full">
+                    <button id="btn-analyze" class="btn-primary w-full py-3.5 rounded-xl font-bold text-white mb-6 tracking-wide flex items-center justify-center gap-2 shrink-0 shadow-lg">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        执行多维度画质解析引擎
+                    </button>
+                    <div id="output" class="flex-1 overflow-y-auto pr-2 pb-10 min-h-0">
+                        <div class="h-full flex flex-col items-center justify-center text-slate-500 py-10 border border-slate-700/50 border-dashed rounded-xl bg-slate-900/20">
+                            <svg class="w-12 h-12 mb-4 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                            等待载入分析源数据...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. 黑白灰 -->
+                <div id="tab-gray" class="tab-content h-full">
+                    <button onclick="analyzeGray()" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 py-3.5 rounded-xl font-bold text-slate-200 transition mb-6 shrink-0 shadow-lg">提取灰阶直方图与光影报告</button>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0 h-full pb-6">
+                        <div class="rounded-xl border border-slate-700 bg-black flex items-center justify-center overflow-hidden h-full relative">
+                            <div class="absolute inset-0 opacity-10" style="background-image: linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px); background-size: 20px 20px;"></div>
+                            <canvas id="gray-canvas" class="max-h-full max-w-full z-10 drop-shadow-2xl"></canvas>
+                        </div>
+                        <div id="gray-output" class="h-full overflow-y-auto pr-2 pb-10">
+                            <div class="h-full flex flex-col items-center justify-center text-slate-500 py-10 border border-slate-700/50 border-dashed rounded-xl bg-slate-900/20">
+                                准备就绪，点击上方按钮开始演算
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. 色彩 -->
+                <div id="tab-color" class="tab-content h-full">
+                    <button onclick="analyzeColors()" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 py-3.5 rounded-xl font-bold text-slate-200 transition mb-6 shrink-0 shadow-lg">光谱提取与色彩心理学诊断</button>
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-0 h-full pb-6">
+                        
+                        <div class="lg:col-span-5 bg-slate-900/40 p-6 rounded-xl border border-slate-800 flex flex-col items-center h-full relative overflow-y-auto scrollbar-hide shadow-lg">
+                            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-violet-600/10 blur-[80px] rounded-full pointer-events-none z-0"></div>
+                            
+                            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-700/50 pb-3 w-full mb-6 text-center z-10 shrink-0">画面主色相 / 色温雷达</h4>
+                            
+                            <div id="color-dashboard" class="w-full flex-1 flex flex-col items-center justify-center z-10 min-h-0">
+                                <span class="text-slate-600 text-sm flex items-center gap-2">
+                                    <svg class="w-5 h-5 animate-pulse opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> 
+                                    等待提取光谱数据...
+                                </span>
+                            </div>
+                        </div>
+
+                        <div id="color-output" class="lg:col-span-7 h-full overflow-y-auto pr-2 pb-10">
+                            <div class="h-full flex flex-col items-center justify-center text-slate-500 py-10 border border-slate-700/50 border-dashed rounded-xl bg-slate-900/20">
+                                准备就绪，点击上方按钮开始演算
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Composition -->
+                <div id="tab-comp" class="tab-content h-full">
+                    <div class="flex gap-4 mb-6 shrink-0 bg-slate-900/40 p-2 rounded-xl border border-slate-800 shadow-md">
+                        <select id="guide-type" class="flex-1 bg-transparent border-none text-slate-200 text-sm focus:ring-0 custom-select pl-2" style="background-position: right 0.5rem center;">
+                            <optgroup label="基础几何"><option value="thirds">三分法 (九宫格)</option><option value="golden">黄金分割</option><option value="center">居中构图</option><option value="diagonal">对角线</option><option value="triangle">三角形</option></optgroup>
+                            <optgroup label="透视与空间"><option value="one_point">单点透视</option><option value="two_point">两点透视</option><option value="symmetry">对称构图</option><option value="depth_layers">前景与背景</option></optgroup>
+                            <optgroup label="动势引导"><option value="leading_lines">引导线</option><option value="s_curve">S形曲线</option><option value="radiating">放射线</option></optgroup>
+                        </select>
+                        <button id="btn-draw" class="bg-violet-600/20 text-violet-400 border border-violet-500/30 px-6 py-2 rounded-lg text-sm font-bold hover:bg-violet-600 hover:text-white transition">投射辅助线</button>
+                    </div>
+                    <div class="flex-1 bg-[#050810] rounded-xl flex items-center justify-center p-4 relative border border-slate-800 overflow-hidden min-h-0 pb-6">
+                        <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(#fff 1px, transparent 1px); background-size: 24px 24px;"></div>
+                        <canvas id="comp-canvas" class="max-h-full max-w-full z-10 drop-shadow-2xl"></canvas>
+                    </div>
+                </div>
+
+                <!-- 5. Abstract -->
+                <div id="tab-abstract" class="tab-content h-full">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 shrink-0">
+                        <div class="bg-slate-900/40 p-5 rounded-xl border border-slate-800 group hover:border-slate-600 transition shadow-md">
+                            <div class="flex justify-between items-center mb-3">
+                                <label class="text-[11px] text-slate-400 font-bold uppercase tracking-wide">👤 Threshold</label>
+                                <span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-300">剪影测试</span>
+                            </div>
+                            <input type="range" id="sil-threshold" min="0" max="255" value="128" class="w-full mb-4 accent-violet-500 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                            <button onclick="drawSilhouette()" class="w-full bg-slate-800 py-2 rounded-lg text-xs font-semibold hover:bg-slate-700 transition">二值化演算</button>
+                        </div>
+                        <div class="bg-slate-900/40 p-5 rounded-xl border border-slate-800 group hover:border-slate-600 transition shadow-md">
+                            <div class="flex justify-between items-center mb-3">
+                                <label class="text-[11px] text-slate-400 font-bold uppercase tracking-wide">🔳 Pixelate</label>
+                                <span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-300">色块测试</span>
+                            </div>
+                            <input type="range" id="pix-size" min="4" max="64" step="2" value="16" class="w-full mb-4 accent-cyan-500 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                            <button onclick="drawPixelation()" class="w-full bg-slate-800 py-2 rounded-lg text-xs font-semibold hover:bg-slate-700 transition">降采样处理</button>
+                        </div>
+                        <div class="bg-slate-900/40 p-5 rounded-xl border border-slate-800 group hover:border-slate-600 transition shadow-md">
+                            <div class="flex justify-between items-center mb-3">
+                                <label class="text-[11px] text-slate-400 font-bold uppercase tracking-wide">👁️ Gaussian</label>
+                                <span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-300">视线模糊</span>
+                            </div>
+                            <input type="range" id="blur-radius" min="1" max="30" value="10" class="w-full mb-4 accent-emerald-500 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                            <button onclick="drawBlur()" class="w-full bg-slate-800 py-2 rounded-lg text-xs font-semibold hover:bg-slate-700 transition">模拟眯眼滤镜</button>
+                        </div>
+                    </div>
+                    <div class="flex-1 bg-[#050810] rounded-xl flex items-center justify-center p-4 relative border border-slate-800 overflow-hidden min-h-0 pb-6">
+                        <div class="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#fff_1px,transparent_1px)]" style="background-size: 32px 32px;"></div>
+                        <canvas id="abstract-canvas" class="max-h-full max-w-full z-10 drop-shadow-2xl"></canvas>
+                    </div>
+                </div>
+
+                <!-- 6. AI Edit -->
+                <div id="tab-edit" class="tab-content h-full">
+                    <div class="grid grid-cols-2 gap-4 mb-4 shrink-0">
+                        <button id="btn-transfer" class="bg-slate-800 py-3 rounded-xl text-sm border border-slate-700 hover:bg-slate-700 transition font-bold text-slate-200 shadow-sm flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                            1. 提取分析报告结论
+                        </button>
+                        <select id="edit-level" class="pro-input rounded-xl p-3 text-sm text-slate-300 font-medium custom-select">
+                            <option value="小改动">重构幅度: 局部微调与优化</option>
+                            <option value="大改动">重构幅度: 深度解构与重绘</option>
+                            <option value="微改动">重构幅度: 仅做光影/色彩润色</option>
+                        </select>
+                    </div>
+                    
+                    <div class="relative w-full mb-4 shrink-0 shadow-sm rounded-xl">
+                        <textarea id="edit-prompt" class="w-full min-h-[120px] max-h-[500px] p-4 pb-6 rounded-xl pro-input text-sm leading-relaxed font-mono text-violet-100 resize-none shadow-inner block" placeholder="点击上方按钮自动生成 Prompt，或在此手动输入重构指令... (按住下方横条可丝滑拖拉调整高度)"></textarea>
+                        <div id="drag-handle" class="absolute bottom-0 left-0 w-full h-4 cursor-ns-resize z-10 flex items-center justify-center hover:bg-violet-500/20 transition-colors rounded-b-xl group">
+                            <div class="w-12 h-1 bg-slate-600 rounded-full group-hover:bg-violet-400 transition-colors"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center justify-between bg-slate-900/60 p-4 rounded-xl border border-slate-700/50 mb-6 shrink-0 shadow-md">
+                        <label class="flex items-center cursor-pointer text-sm text-slate-300 font-medium group">
+                            <div class="relative flex items-center justify-center w-5 h-5 mr-3">
+                                <input type="checkbox" id="enable-img-gen" class="peer appearance-none w-5 h-5 border-2 border-slate-500 rounded bg-transparent checked:bg-cyan-500 checked:border-cyan-500 transition-all">
+                                <svg class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                            </div>
+                            启用 Image 模型自动出图验证
+                        </label>
+                        <button id="btn-edit" class="bg-gradient-to-r from-cyan-600 to-blue-600 px-8 py-2.5 rounded-lg font-bold text-white hover:from-cyan-500 hover:to-blue-500 transition shadow-[0_0_15px_rgba(8,145,178,0.4)]">
+                            2. 执行重构推演
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0 h-full pb-6">
+                        <div id="edit-output" class="h-full overflow-y-auto pr-2 pb-10">
+                            <div class="h-full flex flex-col items-center justify-center text-slate-500 py-10 border border-slate-700/50 border-dashed rounded-xl bg-slate-900/20">
+                                等待生成修改方案与推演指导...
+                            </div>
+                        </div>
+                        <div class="bg-black/50 p-2 rounded-xl border border-slate-800 flex items-center justify-center h-full relative overflow-hidden group">
+                            <div class="absolute inset-0 opacity-[0.02]" style="background-image: linear-gradient(0deg, transparent 24%, rgba(255, 255, 255, .3) 25%, rgba(255, 255, 255, .3) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, .3) 75%, rgba(255, 255, 255, .3) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, rgba(255, 255, 255, .3) 25%, rgba(255, 255, 255, .3) 26%, transparent 27%, transparent 74%, rgba(255, 255, 255, .3) 75%, rgba(255, 255, 255, .3) 76%, transparent 77%, transparent); background-size: 50px 50px;"></div>
+                            <img id="edit-img-result" class="hidden max-w-full max-h-full object-contain rounded-lg z-10 drop-shadow-2xl">
+                            <button id="btn-download-img" onclick="downloadGeneratedImage()" class="hidden absolute top-4 right-4 z-20 bg-slate-900/80 hover:bg-violet-600 border border-slate-700 hover:border-violet-500 text-slate-300 hover:text-white p-2.5 rounded-lg backdrop-blur-md transition-all shadow-lg" title="下载重构图像">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                                </svg>
+                            </button>
+                            <span id="edit-img-placeholder" class="text-slate-600 text-sm font-mono z-10 flex flex-col items-center gap-3">
+                                <svg class="w-8 h-8 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                Render Output
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+<script>
+    /* ================= 核心变量与提示词更新 ================= */
+    let currentImageElement = new Image();
+    let currentBase64 = "";
+    let analysisRawText = "";
+
+    const PROMPTS = {
+        main: `你是一位资深的游戏美术总监和视觉设计专家，拥有20年的3A游戏场景设计经验。\n你的任务是以严格、客观、专业的标准分析这张游戏场景图片。\n请务必按照以下格式输出：\n## 📊 总体评分: X/10\n(评分标准: 9-10分大师级, 7-8分优秀, 5-6分合格, 3-4分需改进, 1-2分严重不足)\n\n## 🎯 核心优点（Top 3）\n## ⚠️ 主要问题（Top 3）\n\n## 📝 详细分析\n### 1. 构图与画面结构\n### 2. 视觉引导与层次\n### 3. 焦点与兴趣点\n### 4. 色彩设计\n### 5. 明度与黑白灰关系\n### 6. 光影与氛围\n### 7. 材质与细节\n### 8. 设计与创意\n\n## 🔧 具体修改建议\n### 🔴 高优先级（必须修复）\n### 🟡 中优先级（建议改进）\n### 🟢 低优先级（锦上添花）\n\n## 💡 参考方向 (可参考的游戏/电影/艺术家)`,
+        gray: `作为资深美术设计师，基于我提取的灰阶数据分析黑白灰关系: {stats}。请务必使用以下格式进行深度解析并输出：\n## 📊 明度分布诊断\n(分析明度分布是否符合场景氛围)\n## ⚠️ 层次与对比度评估\n(是否缺乏层次感或对比度？是否有死黑或曝白？)\n## 💡 调修实操建议\n(请给出具体的后期调修或重绘意见)`,
+        color: `作为资深美术指导，基于提取的色彩分布数据进行分析: {stats}。请务必使用以下格式进行深度解析并输出：\n## 🎨 氛围与主调契合度\n(主色调与画面情感氛围是否契合？)\n## ⚖️ 色彩层级与对比诊断\n(色彩饱和度与冷暖对比是否高级？)\n## 💡 色彩平衡重构方案\n(请给出具体的调色和色彩平衡方案建议)`,
+        edit: `你是一位专业游戏场景原画师。基于以下修改建议，对画面进行【{level}】：\n\n{suggestions}\n\n**修改要求**：\n- 大改动：重构构图/光影/主色调\n- 小改动：优化对比度/色彩/层次\n- 微调：仅做细节润色和局部提亮压暗\n\n请务必使用以下格式输出：\n## 🎯 核心重构目标\n## 🛠️ 详细实操步骤\n## 🎨 预期最终效果`
+    };
+
+    /* ================= 鉴权与初始化 ================= */
+    document.addEventListener("DOMContentLoaded", () => {
+        const savedKey = localStorage.getItem("gemini_api_key");
+        if(savedKey) {
+            document.getElementById("api-key").value = savedKey;
+            document.getElementById('btn-load-models').click();
+        }
+    });
+
+    document.getElementById('btn-load-models').onclick = async (e) => {
+        const apiKey = document.getElementById('api-key').value.trim();
+        if (!apiKey) return alert("请先输入 API Key");
+        
+        localStorage.setItem("gemini_api_key", apiKey);
+        e.target.innerHTML = '<span class="loader"></span> 连接中...';
+        
+        try {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error?.message || "鉴权失败");
+            
+            const selText = document.getElementById('model-select');
+            const selImg = document.getElementById('img-model-select');
+            selText.innerHTML = "";
+            selImg.innerHTML = "";
+            
+            data.models.filter(m => {
+                const methods = m.supportedGenerationMethods || m.supportedMethods ||[];
+                return methods.includes("generateContent");
+            }).forEach(m => {
+                const modelNameLower = m.name.toLowerCase();
+                const option = new Option(`${m.displayName} (${m.name.replace('models/','')})`, m.name);
+                
+                // 根据模型名称分离文本模型与图像生成模型
+                if (modelNameLower.includes("image") || modelNameLower.includes("imagen")) {
+                    selImg.add(option);
+                } else {
+                    selText.add(option);
+                }
+            });
+
+            // 兜底策略：如果用户的 API 权限未返回任何图像模型，提供一个默认值
+            if (selImg.options.length === 0) {
+                selImg.add(new Option(`Gemini 2.5 Flash Image (Fallback)`, `models/gemini-2.5-flash-image`));
+            }
+            
+            e.target.innerHTML = '✅ 加载成功';
+            setTimeout(() => e.target.innerHTML = '刷新账号模型列表', 2000);
+        } catch(err) { 
+            e.target.innerHTML = '❌ 加载失败';
+            alert(err.message); 
+        }
+    };
+
+    function switchTab(id) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        event.currentTarget.classList.add('active');
+    }
+
+    /* ================= 图像输入处理 ================= */
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-violet-500'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-violet-500'));
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault(); dropZone.classList.remove('border-violet-500');
+        if (e.dataTransfer.files.length) processFile(e.dataTransfer.files[0]);
+    });
+    
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) processFile(e.target.files[0]);
+    });
+    
+    document.addEventListener('paste', (e) => {
+        const items = (e.clipboardData || window.clipboardData).items;
+        for (let item of items) {
+            if (item.type.startsWith('image/')) {
+                e.preventDefault();
+                processFile(item.getAsFile());
+                return;
+            }
+        }
+    });
+
+    function processFile(file) {
+        if (!file.type.startsWith('image/')) return alert('请提供图像文件！');
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            currentImageElement.src = e.target.result;
+            currentImageElement.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                let w = currentImageElement.width, h = currentImageElement.height;
+                
+                if (w > h && w > 1024) { h *= 1024 / w; w = 1024; } 
+                else if (h > 1024) { w *= 1024 / h; h = 1024; }
+                
+                canvas.width = w; canvas.height = h;
+                ctx.drawImage(currentImageElement, 0, 0, w, h);
+                
+                const fullBase64 = canvas.toDataURL('image/jpeg', 0.85);
+                currentBase64 = fullBase64.split(',')[1];
+                
+                const preview = document.getElementById('preview');
+                preview.src = fullBase64;
+                preview.classList.remove('hidden');
+                document.getElementById('upload-txt').classList.add('hidden');
+                dropZone.style.borderStyle = 'solid';
+                
+                if(document.getElementById('tab-comp').classList.contains('active')) document.getElementById('btn-draw').click();
+                if(document.getElementById('tab-abstract').classList.contains('active')) drawSilhouette();
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+
+    /* ================= 核心 API 通信层 ================= */
+    async function callGemini(prompt, btnObj, loadingTxt, originalTxt) {
+        const apiKey = document.getElementById('api-key').value.trim();
+        const modelName = document.getElementById('model-select').value;
+        
+        if (!currentBase64) { alert("请先载入图像！"); return null; }
+        if (!apiKey || !modelName) { alert("请确保已输入 Key 并加载了模型！"); return null; }
+
+        btnObj.innerHTML = `<span class="loader"></span> ${loadingTxt}`;
+        btnObj.disabled = true;
+
+        try {
+            const url = `https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${apiKey}`;
+            const payload = {
+                contents: [{ parts:[
+                    { text: prompt },
+                    { inlineData: { mimeType: "image/jpeg", data: currentBase64 } }
+                ]}],
+                generationConfig: { temperature: 0.7 }
+            };
+
+            const res = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+            const data = await res.json();
+            
+            if (!res.ok) throw new Error(data.error?.message || "服务器拒绝请求");
+            return data.candidates[0].content.parts[0].text;
+        } catch(e) {
+            throw e;
+        } finally {
+            btnObj.innerHTML = originalTxt;
+            btnObj.disabled = false;
+        }
+    }
+
+    function renderMarkdownToCards(text, containerId, prependHTML = '') {
+        const outDiv = document.getElementById(containerId);
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = marked.parse(text);
+        
+        outDiv.innerHTML = prependHTML; 
+        
+        let currentCard = null;
+        Array.from(tempDiv.childNodes).forEach(node => {
+            if (node.tagName === 'H2') {
+                currentCard = document.createElement('div');
+                currentCard.className = 'markdown-card markdown-body';
+                outDiv.appendChild(currentCard);
+            }
+            if (!currentCard && node.textContent.trim() !== '') {
+                currentCard = document.createElement('div');
+                currentCard.className = 'markdown-card markdown-body';
+                outDiv.appendChild(currentCard);
+            }
+            if (currentCard) {
+                currentCard.appendChild(node.cloneNode(true));
+            }
+        });
+    }
+
+    /* ================= 1. 深度解析 ================= */
+    document.getElementById('btn-analyze').onclick = async (e) => {
+        const originalBtnHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>执行多维度画质解析引擎`;
+        try {
+            const text = await callGemini(PROMPTS.main, e.target, "深度解析演算中，请耐心等待...", originalBtnHTML);
+            if(text) {
+                analysisRawText = text;
+                renderMarkdownToCards(text, 'output');
+            }
+        } catch(err) { 
+            document.getElementById('output').innerHTML = `<div class="bg-rose-900/50 text-rose-300 p-4 rounded-lg border border-rose-800">❌ ${err.message}</div>`; 
+        }
+    };
+
+    /* ================= 2. 黑白灰分析 ================= */
+    async function analyzeGray() {
+        if (!currentImageElement.src) return alert("请先载入图像");
+        const canvas = document.getElementById('gray-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = currentImageElement.width; canvas.height = currentImageElement.height;
+        ctx.drawImage(currentImageElement, 0, 0);
+        
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imgData.data;
+        let histogram = new Array(256).fill(0);
+        let totalPixels = canvas.width * canvas.height;
+
+        for (let i = 0; i < data.length; i += 4) {
+            const avg = Math.round((data[i] + data[i+1] + data[i+2]) / 3);
+            data[i] = data[i+1] = data[i+2] = avg; 
+            histogram[avg]++;
+        }
+        ctx.putImageData(imgData, 0, 0);
+
+        let dark = 0, mid = 0, light = 0, sumMean = 0;
+        for (let i = 0; i < 256; i++) {
+            if (i < 86) dark += histogram[i];
+            else if (i < 171) mid += histogram[i];
+            else light += histogram[i];
+            sumMean += i * histogram[i];
+        }
+
+        const mean = sumMean / totalPixels;
+        let varianceSum = 0;
+        for (let i = 0; i < 256; i++) { varianceSum += histogram[i] * Math.pow(i - mean, 2); }
+        const contrast = Math.sqrt(varianceSum / totalPixels);
+
+        const dp = (dark/totalPixels*100).toFixed(1), mp = (mid/totalPixels*100).toFixed(1), lp = (light/totalPixels*100).toFixed(1);
+        const stats = `暗部:${dp}%, 中间调:${mp}%, 亮部:${lp}%, 平均明度:${mean.toFixed(1)}, 对比度指数:${contrast.toFixed(1)}`;
+        
+        const uiPanel = `
+        <div class="markdown-card" style="margin-bottom: 1.25rem;">
+            <div class="grid grid-cols-3 gap-3 mb-4 text-center">
+                <div class="bg-slate-800/80 p-3 rounded-lg border border-slate-700/50">
+                    <div class="text-xl font-bold text-slate-300 mb-1">${dp}%</div><div class="text-[10px] text-slate-500 uppercase">暗部 (0-85)</div>
+                </div>
+                <div class="bg-slate-700/80 p-3 rounded-lg border border-slate-600/50">
+                    <div class="text-xl font-bold text-slate-200 mb-1">${mp}%</div><div class="text-[10px] text-slate-400 uppercase">中间调 (86-170)</div>
+                </div>
+                <div class="bg-slate-600/80 p-3 rounded-lg border border-slate-500/50">
+                    <div class="text-xl font-bold text-white mb-1">${lp}%</div><div class="text-[10px] text-slate-300 uppercase">亮部 (171-255)</div>
+                </div>
+            </div>
+            <div class="flex justify-between text-xs text-slate-400 bg-black/30 p-3 rounded-lg border border-slate-800">
+                <span>总体平均明度: <strong class="text-white ml-1 text-sm bg-transparent p-0 border-none">${mean.toFixed(0)}/255</strong></span>
+                <span>对比度指数: <strong class="ml-1 text-sm bg-transparent p-0 border-none ${contrast > 40 && contrast < 80 ? 'text-emerald-400' : 'text-rose-400'}">${contrast.toFixed(0)}</strong></span>
+            </div>
+        </div>`;
+
+        const outDiv = document.getElementById('gray-output');
+        outDiv.innerHTML = '<div class="h-full flex items-center justify-center text-slate-400"><div class="loader"></div> 正在生成层级诊断报告...</div>';
+        const btn = document.querySelector("#tab-gray button");
+        
+        try {
+            const text = await callGemini(PROMPTS.gray.replace('{stats}', stats), btn, "评估光影中...", "提取灰阶直方图与光影报告");
+            if(text) renderMarkdownToCards(text, 'gray-output', uiPanel);
+        } catch(err) { outDiv.innerHTML = `<div class="bg-rose-900/50 text-rose-300 p-4 rounded-lg border border-rose-800">❌ ${err.message}</div>`; }
+    }
+
+    function rgb2hsv(r, g, b) {
+        let rabs = r/255, gabs = g/255, babs = b/255;
+        let v = Math.max(rabs, gabs, babs), diff = v - Math.min(rabs, gabs, babs);
+        let h = diff === 0 ? 0 : v === rabs ? (gabs-babs)/diff : v === gabs ? 2+(babs-rabs)/diff : 4+(rabs-gabs)/diff;
+        return[Math.round(h * 60 < 0 ? h * 60 + 360 : h * 60), Math.round(v === 0 ? 0 : diff/v*100), Math.round(v*100)];
+    }
+
+    /* ================= 3. 色彩分析 ================= */
+    async function analyzeColors() {
+        if (!currentImageElement.src) return alert("请先载入图像");
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 100; canvas.height = 100; 
+        ctx.drawImage(currentImageElement, 0, 0, 100, 100);
+        const data = ctx.getImageData(0, 0, 100, 100).data;
+        
+        let warm=0, cool=0, neutral=0, total=0;
+        let colorMap = {};
+
+        for(let i=0; i<data.length; i+=4) {
+            let r=data[i], g=data[i+1], b=data[i+2];
+            let qr = Math.floor(r/32)*32+16, qg = Math.floor(g/32)*32+16, qb = Math.floor(b/32)*32+16;
+            let hex = `#${qr.toString(16).padStart(2,'0')}${qg.toString(16).padStart(2,'0')}${qb.toString(16).padStart(2,'0')}`;
+            colorMap[hex] = (colorMap[hex] || 0) + 1;
+
+            let[h, s, v] = rgb2hsv(r, g, b);
+            if (s < 15 || v < 20) neutral++;
+            else if (h < 75 || h > 300) warm++;
+            else cool++;
+            total++;
+        }
+        
+        let sortedColors = Object.entries(colorMap).sort((a,b)=>b[1]-a[1]).slice(0, 8);
+        let top5Hexes = sortedColors.slice(0,5).map(c => c[0]).join(', ');
+
+        /* HUD 雷达甜甜圈图绘制 */
+        let piePaths = '';
+        let startAngle = -90;
+        let pieTotal = sortedColors.reduce((sum, c) => sum + c[1], 0);
+        
+        sortedColors.forEach(c => {
+            let percentNum = (c[1] / total) * 100;
+            let percentStr = percentNum.toFixed(1);
+            let sliceAngle = (c[1] / pieTotal) * 360;
+            let endAngle = startAngle + sliceAngle;
+            let largeArc = sliceAngle > 180 ? 1 : 0;
+            
+            let x1 = 200 + 140 * Math.cos(startAngle * Math.PI / 180);
+            let y1 = 200 + 140 * Math.sin(startAngle * Math.PI / 180);
+            let x2 = 200 + 140 * Math.cos(endAngle * Math.PI / 180);
+            let y2 = 200 + 140 * Math.sin(endAngle * Math.PI / 180);
+            
+            piePaths += `<path d="M 200 200 L ${x1} ${y1} A 140 140 0 ${largeArc} 1 ${x2} ${y2} Z" fill="${c[0]}" stroke="#0B0F19" stroke-width="3" class="transition-opacity duration-300 hover:opacity-80"></path>`;
+            
+            if (percentNum > 4.0) {
+                let midAngle = startAngle + sliceAngle / 2;
+                let labelX = 200 + 105 * Math.cos(midAngle * Math.PI / 180);
+                let labelY = 200 + 105 * Math.sin(midAngle * Math.PI / 180);
+                
+                let hex = c[0].replace('#', '');
+                let r = parseInt(hex.substr(0, 2), 16);
+                let g = parseInt(hex.substr(2, 2), 16);
+                let b = parseInt(hex.substr(4, 2), 16);
+                let yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+                let textColor = (yiq >= 128) ? '#0f172a' : '#ffffff';
+
+                piePaths += `<text x="${labelX}" y="${labelY}" fill="${textColor}" font-size="12" font-weight="bold" font-family="Inter" text-anchor="middle" dominant-baseline="central" style="pointer-events:none;">${percentStr}%</text>`;
+            }
+            startAngle = endAngle;
+        });
+
+        piePaths += `
+            <circle cx="200" cy="200" r="65" fill="#0B0F19" stroke="rgba(255,255,255,0.08)" stroke-width="2" style="filter: drop-shadow(inset 0 4px 6px rgba(0,0,0,0.5));"/>
+            <text x="200" y="190" font-size="10" fill="#64748b" text-anchor="middle" font-family="Inter" font-weight="700" letter-spacing="0.1em">DOMINANT</text>
+            <text x="200" y="215" font-size="16" fill="#fff" text-anchor="middle" font-family="mono" font-weight="bold">${sortedColors[0][0]}</text>
+        `;
+
+        const wp = (warm/total*100).toFixed(1), cp = (cool/total*100).toFixed(1), np = (neutral/total*100).toFixed(1);
+        
+        const dashboardHtml = `
+            <div class="w-full flex justify-center mb-8 drop-shadow-2xl relative">
+                <!-- HUD 辅助网格底纹 -->
+                <div class="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
+                    <div class="w-[280px] h-[280px] rounded-full border border-slate-500/30 border-dashed"></div>
+                    <div class="absolute w-[320px] h-[1px] bg-slate-500/20"></div>
+                    <div class="absolute w-[1px] h-[320px] bg-slate-500/20"></div>
+                </div>
+                <svg viewBox="0 0 400 400" class="w-full max-w-[320px] h-auto aspect-square relative z-10">
+                    ${piePaths}
+                </svg>
+            </div>
+
+            <!-- 色温测算条 (Tech HUD 风格) -->
+            <div class="w-full bg-[#050810]/60 rounded-xl p-5 border border-slate-700/50 mb-6 backdrop-blur-md relative overflow-hidden shadow-lg">
+                <div class="absolute inset-0 opacity-[0.05]" style="background-image: linear-gradient(90deg, #fff 1px, transparent 1px); background-size: 8px 100%;"></div>
+                <div class="relative z-10">
+                    <div class="flex justify-between text-[10px] font-bold uppercase tracking-widest mb-3.5 px-1">
+                        <span class="text-orange-400 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-orange-500 shadow-[0_0_5px_#f97316]"></span> Warm ${wp}%</span>
+                        <span class="text-slate-400 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span> Neutral ${np}%</span>
+                        <span class="text-cyan-400 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_5px_#06b6d4]"></span> Cool ${cp}%</span>
+                    </div>
+                    <div class="h-3 w-full rounded flex bg-slate-900 overflow-hidden shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] border border-slate-700/50">
+                        <div class="bg-gradient-to-r from-orange-600 to-orange-400 h-full border-r border-slate-900" style="width:${wp}%"></div>
+                        <div class="bg-slate-600 h-full border-r border-slate-900" style="width:${np}%"></div>
+                        <div class="bg-gradient-to-r from-cyan-600 to-cyan-400 h-full" style="width:${cp}%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 黄金比例 Pantone 卡片样式色块 -->
+            <div class="grid grid-cols-5 gap-3 w-full">
+                ${sortedColors.slice(0,5).map(c => `
+                    <div class="flex flex-col bg-slate-800/40 rounded-xl border border-slate-700/50 overflow-hidden hover:border-slate-500 transition-all duration-300 group shadow-md hover:shadow-xl hover:shadow-violet-900/20">
+                        <div class="w-full aspect-[1.618/1] relative" style="background-color: ${c[0]}">
+                            <div class="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent"></div>
+                            <div class="absolute inset-0 shadow-[inset_0_0_12px_rgba(0,0,0,0.4)]"></div>
+                        </div>
+                        <div class="py-3 flex flex-col items-center justify-center bg-slate-900/80 border-t border-slate-700/50">
+                            <span class="text-[12px] text-slate-200 font-mono tracking-wider font-semibold">${c[0]}</span>
+                            <span class="text-[10px] text-violet-400 font-bold mt-1">${((c[1]/total)*100).toFixed(1)}%</span>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+        document.getElementById('color-dashboard').innerHTML = dashboardHtml;
+
+        const outDiv = document.getElementById('color-output');
+        outDiv.innerHTML = '<div class="h-full flex items-center justify-center text-slate-400"><div class="loader"></div> 正在分析色彩心理学情绪...</div>';
+        const btn = document.querySelector("#tab-color button");
+        
+        try {
+            const text = await callGemini(PROMPTS.color.replace('{stats}', `暖${wp}%, 冷${cp}%, 中性${np}%, 画面前五主色十六进制: ${top5Hexes}`), btn, "诊断光谱中...", "光谱提取与色彩心理学诊断");
+            if(text) renderMarkdownToCards(text, 'color-output');
+        } catch(err) { outDiv.innerHTML = `<div class="bg-rose-900/50 text-rose-300 p-4 rounded-lg border border-rose-800">❌ ${err.message}</div>`; }
+    }
+
+    /* ================= 4. 构图骨架 ================= */
+    document.getElementById('btn-draw').onclick = drawCompositionGuide;
+    document.getElementById('guide-type').onchange = drawCompositionGuide;
+
+    function drawCompositionGuide() {
+        if (!currentImageElement.src) return;
+        const canvas = document.getElementById('comp-canvas');
+        const ctx = canvas.getContext('2d');
+        const type = document.getElementById('guide-type').value;
+        
+        canvas.width = currentImageElement.width; canvas.height = currentImageElement.height;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(currentImageElement, 0, 0);
+        
+        const w = canvas.width, h = canvas.height;
+        
+        const baseLineW = Math.max(1, Math.min(w, h) / 500);
+
+        const drawPath = () => {
+            ctx.beginPath();
+            if (type === 'thirds') {
+                ctx.moveTo(w/3, 0); ctx.lineTo(w/3, h); ctx.moveTo(w*2/3, 0); ctx.lineTo(w*2/3, h);
+                ctx.moveTo(0, h/3); ctx.lineTo(w, h/3); ctx.moveTo(0, h*2/3); ctx.lineTo(w, h*2/3);
+            } 
+            else if (type === 'golden') {
+                const r = 0.618;
+                ctx.moveTo(w*(1-r), 0); ctx.lineTo(w*(1-r), h); ctx.moveTo(w*r, 0); ctx.lineTo(w*r, h);
+                ctx.moveTo(0, h*(1-r)); ctx.lineTo(w, h*(1-r)); ctx.moveTo(0, h*r); ctx.lineTo(w, h*r);
+            } 
+            else if (type === 'center') {
+                ctx.moveTo(w/2, 0); ctx.lineTo(w/2, h); ctx.moveTo(0, h/2); ctx.lineTo(w, h/2);
+                ctx.moveTo(w/2 + Math.min(w,h)/4, h/2); 
+                ctx.arc(w/2, h/2, Math.min(w,h)/4, 0, Math.PI*2);
+            }
+            else if (type === 'diagonal') {
+                ctx.moveTo(0, 0); ctx.lineTo(w, h); ctx.moveTo(w, 0); ctx.lineTo(0, h);
+            }
+            else if (type === 'triangle') {
+                ctx.moveTo(w/2, h*0.2); ctx.lineTo(w*0.2, h*0.8); ctx.lineTo(w*0.8, h*0.8); ctx.closePath();
+            }
+            else if (type === 'one_point') {
+                const vx = w/2, vy = h/2;
+                [[0,0],[w,0],[0,h], [w,h]].forEach(([cx, cy]) => { ctx.moveTo(cx, cy); ctx.lineTo(vx, vy); });
+                ctx.moveTo(0, vy); ctx.lineTo(w, vy);
+            }
+            else if (type === 'two_point') {
+                const vy = h/2, vx1 = w/6, vx2 = w*5/6;
+                ctx.moveTo(0, vy); ctx.lineTo(w, vy);[-h/4, 0, h/4].forEach(offset => {
+                    const ty = vy + offset;
+                    ctx.moveTo(vx1, vy); ctx.lineTo(w, ty + (vy-ty)*0.3);
+                    ctx.moveTo(vx2, vy); ctx.lineTo(0, ty + (vy-ty)*0.3);
+                });
+            }
+            else if (type === 'symmetry') {
+                ctx.moveTo(w/2, 0); ctx.lineTo(w/2, h);
+            }
+            else if (type === 'depth_layers') {
+                ctx.moveTo(0, h*0.3); ctx.lineTo(w, h*0.3); ctx.moveTo(0, h*0.7); ctx.lineTo(w, h*0.7);
+            }
+            else if (type === 'leading_lines') {
+                ctx.moveTo(0, h); ctx.lineTo(w*0.7, h*0.3); ctx.moveTo(w*0.3, h); ctx.lineTo(w*0.7, h*0.3); ctx.moveTo(w*0.8, h); ctx.lineTo(w*0.7, h*0.3);
+            }
+            else if (type === 's_curve') {
+                ctx.moveTo(w*0.8, h*0.1); ctx.bezierCurveTo(w*0.1, h*0.3, w*0.9, h*0.7, w*0.2, h*0.9);
+            }
+            else if (type === 'radiating') {
+                ctx.moveTo(0,0); ctx.lineTo(w,h); ctx.moveTo(w,0); ctx.lineTo(0,h); ctx.moveTo(w/2,0); ctx.lineTo(w/2,h); ctx.moveTo(0,h/2); ctx.lineTo(w,h/2);
+            }
+        };
+
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.lineWidth = baseLineW + 1.5; 
+        ctx.setLineDash([]); 
+        drawPath();
+        ctx.stroke();
+
+        ctx.shadowColor = 'transparent'; 
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)'; 
+        ctx.lineWidth = baseLineW;
+        ctx.setLineDash([12, 8]); 
+        drawPath();
+        ctx.stroke();
+
+        ctx.setLineDash([]);
+        const dotColor = 'rgba(168, 85, 247, 0.9)'; 
+
+        if (type === 'one_point') {
+            ctx.beginPath(); ctx.fillStyle = dotColor; ctx.arc(w/2, h/2, baseLineW*3, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.strokeStyle = 'rgba(168, 85, 247, 0.6)'; ctx.lineWidth = 1; ctx.arc(w/2, h/2, baseLineW*7, 0, Math.PI*2); ctx.stroke();
+        }
+        else if (type === 'two_point') {[w/6, w*5/6].forEach(vx => { 
+                ctx.beginPath(); ctx.fillStyle = dotColor; ctx.arc(vx, h/2, baseLineW*3, 0, Math.PI*2); ctx.fill(); 
+                ctx.beginPath(); ctx.strokeStyle = 'rgba(168, 85, 247, 0.6)'; ctx.lineWidth = 1; ctx.arc(vx, h/2, baseLineW*7, 0, Math.PI*2); ctx.stroke();
+            });
+        }
+        else if (type === 'depth_layers') {
+            ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fillRect(0,0,w,h*0.3);
+            ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(0,h*0.7,w,h*0.3);
+        }
+    }
+
+    /* ================= 5. 抽象与轮廓分析 ================= */
+    function getAbstractCanvas() {
+        if (!currentImageElement.src) { alert("请先载入图像"); return null; }
+        const canvas = document.getElementById('abstract-canvas');
+        canvas.width = currentImageElement.width; canvas.height = currentImageElement.height;
+        return canvas;
+    }
+
+    function drawSilhouette() {
+        const canvas = getAbstractCanvas(); if(!canvas) return;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(currentImageElement, 0, 0);
+        const threshold = parseInt(document.getElementById('sil-threshold').value);
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imgData.data;
+        for(let i=0; i<data.length; i+=4) {
+            const gray = data[i]*0.299 + data[i+1]*0.587 + data[i+2]*0.114;
+            const val = gray < threshold ? 0 : 255;
+            data[i] = data[i+1] = data[i+2] = val;
+        }
+        ctx.putImageData(imgData, 0, 0);
+    }
+
+    document.getElementById('sil-threshold').addEventListener('input', drawSilhouette);
+
+    function drawPixelation() {
+        const canvas = getAbstractCanvas(); if(!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const size = parseInt(document.getElementById('pix-size').value);
+        const smallW = Math.max(1, Math.floor(canvas.width / size)), smallH = Math.max(1, Math.floor(canvas.height / size));
+        const offscreen = document.createElement('canvas');
+        offscreen.width = smallW; offscreen.height = smallH;
+        offscreen.getContext('2d').drawImage(currentImageElement, 0, 0, smallW, smallH);
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(offscreen, 0, 0, smallW, smallH, 0, 0, canvas.width, canvas.height);
+    }
+
+    function drawBlur() {
+        const canvas = getAbstractCanvas(); if(!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const radius = parseInt(document.getElementById('blur-radius').value);
+        ctx.filter = `blur(${radius}px)`;
+        ctx.drawImage(currentImageElement, 0, 0);
+        ctx.filter = 'none';
+    }
+
+    /* ================= 6. 重构指导与 AI生图 ================= */
+    document.getElementById('btn-transfer').onclick = () => {
+        if (!analysisRawText) return alert("请先在「深度解析」获取报告");
+        
+        const level = document.getElementById('edit-level').value;
+        const actionVerbs =['调整','优化','增加','减少','改善','增强','统一','添加','去除','提升','降低','加强','弱化','重新','修改','提亮','压暗','强化','柔化','拉开','突出'];
+        const evalWords =['效果不错','处理得当','表现良好','合理','总体而言','值得称赞','做得好','很好地'];
+        
+        let high=[], medium=[], low=[], currentSection="";
+        
+        analysisRawText.split('\n').forEach(line => {
+            line = line.trim();
+            if(line.includes('高优先级') || line.includes('必须修复')) currentSection = "high";
+            else if(line.includes('中优先级') || line.includes('建议改进')) currentSection = "medium";
+            else if(line.includes('低优先级') || line.includes('锦上添花')) currentSection = "low";
+            
+            let cleanLine = line.replace(/^[-*•\d]+\.?\s*/, '').replace(/\*\*/g, '').trim();
+            if (cleanLine.length < 10 || cleanLine.startsWith('#')) return;
+
+            if (actionVerbs.some(v => cleanLine.includes(v)) && !evalWords.some(w => cleanLine.includes(w))) {
+                if (cleanLine.includes(':') || cleanLine.includes('：')) cleanLine = cleanLine.split(/[:：]/)[1].trim();
+                if (currentSection === "high") high.push(cleanLine);
+                else if (currentSection === "medium") medium.push(cleanLine);
+                else low.push(cleanLine);
+            }
+        });
+
+        let extracted =[];
+        const targetCount = { '大改动': 12, '小改动': 6, '微改动': 3 }[level];
+        if (level === '大改动') extracted =[...new Set([...high, ...medium])].slice(0, targetCount);
+        else if (level === '小改动') extracted =[...new Set([...medium, ...high])].slice(0, targetCount);
+        else extracted =[...new Set([...low, ...medium])].slice(0, targetCount);
+
+        if(extracted.length === 0) extracted =["重新调整画面构图，强化视觉焦点", "统一整体色彩倾向，增强环境光", "拉开前景与背景的明度对比"];
+        
+        const formattedSuggestions = extracted.map((s,i)=>`${i+1}. ${s}`).join('\n');
+        document.getElementById('edit-prompt').value = PROMPTS.edit.replace('{level}', level).replace('{suggestions}', formattedSuggestions);
+    };
+
+    /* 输入框丝滑拖拽逻辑 */
+    const promptTextarea = document.getElementById('edit-prompt');
+    const dragHandle = document.getElementById('drag-handle');
+    let isDragging = false;
+    let startY, startHeight, dragRaf;
+
+    dragHandle.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        startY = e.clientY;
+        startHeight = parseInt(window.getComputedStyle(promptTextarea).height, 10);
+        document.body.style.cursor = 'ns-resize';
+        document.body.style.userSelect = 'none'; 
+        e.preventDefault(); 
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        if(dragRaf) cancelAnimationFrame(dragRaf);
+        dragRaf = requestAnimationFrame(() => {
+            const newHeight = Math.max(120, Math.min(500, startHeight + (e.clientY - startY)));
+            promptTextarea.style.height = `${newHeight}px`;
+        });
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            document.body.style.cursor = 'default';
+            document.body.style.userSelect = 'auto'; 
+        }
+    });
+
+    function downloadGeneratedImage() {
+        const imgEl = document.getElementById('edit-img-result');
+        if (!imgEl.src || imgEl.classList.contains('hidden')) {
+            alert("没有可下载的图像！");
+            return;
+        }
+        const a = document.createElement('a');
+        a.href = imgEl.src;
+        a.download = `Freddies_AI_Reconstruct_${new Date().getTime()}.jpg`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    document.getElementById('btn-edit').onclick = async (e) => {
+        const prompt = document.getElementById('edit-prompt').value.trim();
+        if(!prompt) return alert("指令为空");
+        
+        const outDiv = document.getElementById('edit-output');
+        const imgEl = document.getElementById('edit-img-result');
+        const placeholder = document.getElementById('edit-img-placeholder');
+        const btnDownload = document.getElementById('btn-download-img');
+        const isImgGen = document.getElementById('enable-img-gen').checked;
+        const apiKey = document.getElementById('api-key').value.trim();
+
+        if (!isImgGen) {
+            outDiv.innerHTML = '<div class="h-full flex items-center justify-center text-slate-400"><div class="loader"></div> 正在生成推演指导方案...</div>';
+            try {
+                const text = await callGemini(prompt, e.target, "生成指导方案...", "2. 执行重构推演");
+                if(text) renderMarkdownToCards(text, 'edit-output');
+            } catch(err) { outDiv.innerHTML = `<div class="bg-rose-900/50 text-rose-300 p-4 rounded-lg border border-rose-800">❌ ${err.message}</div>`; }
+        } else {
+            if (!currentBase64) return alert("请先载入原图");
+            if (!apiKey) return alert("请先配置 API Key");
+            
+            // 动态读取用户在左侧选中的图像生成模型
+            const imgModelName = document.getElementById('img-model-select').value;
+            if (!imgModelName) return alert("请先在左侧引擎配置中加载并选择 Image Generation 模型！");
+
+            e.target.disabled = true;
+            imgEl.classList.add('hidden');
+            btnDownload.classList.add('hidden');
+            placeholder.classList.remove('hidden');
+
+            try {
+                e.target.innerHTML = '<span class="loader"></span> 生成方案中...';
+                outDiv.innerHTML = '<div class="h-full flex flex-col items-center justify-center text-slate-400"><div class="loader mb-2"></div> 正在为您量身定制重构步骤...</div>';
+                placeholder.innerHTML = '等待重构步骤生成完毕后开始绘制...';
+
+                const textModelName = document.getElementById('model-select').value;
+                const textUrl = `https://generativelanguage.googleapis.com/v1beta/${textModelName}:generateContent?key=${apiKey}`;
+                const textPayload = { contents: [{ parts:[{ text: prompt }, { inlineData: { mimeType: "image/jpeg", data: currentBase64 } }]}], generationConfig: { temperature: 0.7 } };
+
+                const textRes = await fetch(textUrl, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(textPayload) });
+                const textData = await textRes.json();
+                if (!textRes.ok) throw new Error(textData.error?.message || "指导方案生成失败");
+                const generatedText = textData.candidates[0]?.content?.parts[0]?.text;
+                if (!generatedText) throw new Error("模型未返回有效的指导文本");
+                
+                renderMarkdownToCards(generatedText, 'edit-output');
+
+                e.target.innerHTML = '<span class="loader"></span> 绘制验证图...';
+                placeholder.innerHTML = '<div class="loader"></div> 正在根据分析步骤绘制新图像...';
+
+                // 使用动态读取的图像模型 URL
+                const imgUrl = `https://generativelanguage.googleapis.com/v1beta/${imgModelName}:generateContent?key=${apiKey}`;
+                const imgPrompt = `You are an expert game scene artist. Edit this image based on the prompt: ${prompt}\nIMPORTANT: You MUST output a modified image.`;
+
+                const imgPayload = {
+                    contents:[{ parts:[{ text: imgPrompt }, { inlineData: { mimeType: "image/jpeg", data: currentBase64 } }]}],
+                    generationConfig: { responseModalities: ["IMAGE"], temperature: 0.8 },
+                    safetySettings:[
+                        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+                        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+                        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+                        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+                    ]
+                };
+
+                const imgRes = await fetch(imgUrl, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(imgPayload) });
+                const imgData = await imgRes.json();
+                
+                if (!imgRes.ok) throw new Error("生图请求被拒绝: " + (imgData.error?.message || "未知原因"));
+                
+                let foundImage = false;
+                if (imgData.candidates && imgData.candidates.length > 0) {
+                    const candidate = imgData.candidates[0];
+                    candidate.content?.parts?.forEach(part => {
+                        if (part.inlineData) {
+                            imgEl.src = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+                            imgEl.classList.remove('hidden');
+                            btnDownload.classList.remove('hidden'); 
+                            placeholder.classList.add('hidden');
+                            foundImage = true;
+                        }
+                    });
+                }
+                
+                if (!foundImage) placeholder.innerHTML = `<span class="text-rose-400">⚠️ 模型未能返回图片，可能是由于内容安全拦截或 API 限制。<br><br>诊断日志: ${imgData.candidates?.[0]?.finishReason || "未知"}</span>`;
+                
+            } catch(err) {
+                if(outDiv.innerHTML.includes("正在为您量身定制")) {
+                    outDiv.innerHTML = `<div class="bg-rose-900/50 text-rose-300 p-4 rounded-lg border border-rose-800">❌ 方案生成失败: ${err.message}</div>`;
+                    placeholder.innerHTML = "等待方案生成...";
+                } else {
+                    placeholder.innerHTML = `<span class="text-rose-400">❌ 图像绘制失败: ${err.message}</span>`;
+                }
+            } finally {
+                e.target.innerHTML = '2. 执行重构推演';
+                e.target.disabled = false;
+            }
+        }
+    };
+</script>
+</body>
+</html>
