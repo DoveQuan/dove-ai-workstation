@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -112,6 +112,23 @@
             color: #8b5cf6 !important; 
             font-weight: 600;
         }
+
+        /* Provider 按钮样式 */
+        .provider-btn {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            color: #94a3b8;
+        }
+        .provider-btn:hover {
+            background: rgba(51, 65, 85, 0.8);
+            color: #e2e8f0;
+        }
+        .provider-btn.active {
+            background: rgba(139, 92, 246, 0.2);
+            border-color: rgba(139, 92, 246, 0.5);
+            color: #fff;
+            box-shadow: 0 0 10px rgba(139, 92, 246, 0.2);
+        }
     </style>
 </head>
 <body class="h-screen w-screen overflow-hidden flex flex-col">
@@ -151,7 +168,19 @@
                     <span class="text-violet-400">🔑</span>
                     <h3 class="font-bold text-xs text-slate-300 uppercase tracking-wider">Engine Config</h3>
                 </div>
-                <div class="space-y-3">
+                
+                <!-- API Provider 选择 -->
+                <div class="flex gap-2 mb-3">
+                    <button id="btn-gemini" class="flex-1 py-2 px-3 rounded-lg text-xs font-medium border transition provider-btn active" data-provider="gemini">
+                        Google Gemini
+                    </button>
+                    <button id="btn-doubao" class="flex-1 py-2 px-3 rounded-lg text-xs font-medium border transition provider-btn" data-provider="doubao">
+                        豆包大模型
+                    </button>
+                </div>
+
+                <!-- Gemini API Key -->
+                <div id="gemini-config" class="space-y-3">
                     <input type="password" id="api-key" class="w-full p-2.5 rounded-lg pro-input text-sm" placeholder="Input Gemini API Key...">
                     <button id="btn-load-models" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2.5 rounded-lg text-sm text-slate-200 transition font-medium">
                         加载云端模型
@@ -169,6 +198,23 @@
                         <select id="img-model-select" class="w-full p-2.5 rounded-lg pro-input text-sm text-slate-300 custom-select">
                             <option value="" disabled selected hidden>请先加载模型列表...</option>
                         </select>
+                    </div>
+                </div>
+
+                <!-- 豆包 API Key -->
+                <div id="doubao-config" class="space-y-3 hidden">
+                    <input type="password" id="doubao-api-key" class="w-full p-2.5 rounded-lg pro-input text-sm" placeholder="输入豆包 API Key (方舟平台)...">
+                    <div class="flex flex-col gap-1.5 pt-1">
+                        <label class="text-[10px] text-slate-500 font-bold uppercase tracking-wide px-1 flex items-center gap-1.5">📡 模型选择</label>
+                        <select id="doubao-model-select" class="w-full p-2.5 rounded-lg pro-input text-sm text-slate-300 custom-select">
+                            <option value="doubao-pro-32k">豆包 Pro 32K (推荐)</option>
+                            <option value="doubao-pro-8k">豆包 Pro 8K</option>
+                            <option value="doubao-lite-8k">豆包 Lite 8K</option>
+                            <option value="doubao-vision-pro-32k">豆包视觉理解 Pro</option>
+                        </select>
+                    </div>
+                    <div class="text-[10px] text-slate-500 bg-slate-800/50 p-2 rounded">
+                        ⚠️ API Key 获取：<a href="https://console.volcengine.com/ark/region:ark+cn-beijing" target="_blank" class="text-violet-400 hover:underline">火山方舟控制台</a>
                     </div>
                 </div>
             </div>
@@ -189,7 +235,7 @@
             <footer class="glass-panel rounded-xl p-4 shrink-0 text-center flex flex-col gap-2.5 mt-auto">
                 <p class="text-[11px] text-slate-500 flex items-center justify-center gap-1.5 font-medium">
                     <svg class="w-3.5 h-3.5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-                    数据直连 Google API · 本地侧渲染
+                    数据直连 · 本地侧渲染 (Google Gemini / 豆包大模型)
                 </p>
                 <div class="w-full h-px bg-slate-700/50"></div>
                 <a href="mailto:quanzx99@gmail.com" class="group flex items-center justify-center gap-2 text-[12px] text-slate-400 hover:text-white transition-colors cursor-pointer py-1">
@@ -515,6 +561,84 @@
     }
 
     /* ================= 核心 API 通信层 ================= */
+    
+    // 当前 API 提供商
+    let currentProvider = 'gemini';
+
+    // Provider 切换逻辑
+    document.getElementById('btn-gemini').addEventListener('click', function() {
+        currentProvider = 'gemini';
+        document.querySelectorAll('.provider-btn').forEach(btn => btn.classList.remove('active'));
+        this.classList.add('active');
+        document.getElementById('gemini-config').classList.remove('hidden');
+        document.getElementById('doubao-config').classList.add('hidden');
+    });
+
+    document.getElementById('btn-doubao').addEventListener('click', function() {
+        currentProvider = 'doubao';
+        document.querySelectorAll('.provider-btn').forEach(btn => btn.classList.remove('active'));
+        this.classList.add('active');
+        document.getElementById('gemini-config').classList.add('hidden');
+        document.getElementById('doubao-config').classList.remove('hidden');
+    });
+
+    /* ================= 豆包 API 调用 ================= */
+    async function callDoubao(prompt, btnObj, loadingTxt, originalTxt) {
+        const apiKey = document.getElementById('doubao-api-key').value.trim();
+        const modelId = document.getElementById('doubao-model-select').value;
+        
+        if (!apiKey) { alert("请先输入豆包 API Key！"); return null; }
+
+        btnObj.innerHTML = `<span class="loader"></span> ${loadingTxt}`;
+        btnObj.disabled = true;
+
+        try {
+            const url = `https://ark.cn-beijing.volces.com/api/v3/chat/completions`;
+            const payload = {
+                model: modelId,
+                messages: [
+                    { role: "user", content: prompt }
+                ],
+                temperature: 0.7
+            };
+
+            // 如果有图片，添加图片消息
+            if (currentBase64) {
+                payload.messages[0].content = [
+                    { type: "text", text: prompt },
+                    { type: "image_url", image_url: { url: `data:image/jpeg;base64,${currentBase64}` } }
+                ];
+            }
+
+            const res = await fetch(url, { 
+                method: 'POST', 
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                }, 
+                body: JSON.stringify(payload) 
+            });
+            const data = await res.json();
+            
+            if (!res.ok) throw new Error(data.error?.message || "服务器拒绝请求");
+            return data.choices[0].message.content;
+        } catch(e) {
+            throw e;
+        } finally {
+            btnObj.innerHTML = originalTxt;
+            btnObj.disabled = false;
+        }
+    }
+
+    // 统一 API 调用函数
+    async function callAPI(prompt, btnObj, loadingTxt, originalTxt) {
+        if (currentProvider === 'doubao') {
+            return await callDoubao(prompt, btnObj, loadingTxt, originalTxt);
+        } else {
+            return await callAPI(prompt, btnObj, loadingTxt, originalTxt);
+        }
+    }
+
     async function callGemini(prompt, btnObj, loadingTxt, originalTxt) {
         const apiKey = document.getElementById('api-key').value.trim();
         const modelName = document.getElementById('model-select').value;
@@ -577,7 +701,7 @@
     document.getElementById('btn-analyze').onclick = async (e) => {
         const originalBtnHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>执行多维度画质解析引擎`;
         try {
-            const text = await callGemini(PROMPTS.main, e.target, "深度解析演算中，请耐心等待...", originalBtnHTML);
+            const text = await callAPI(PROMPTS.main, e.target, "深度解析演算中，请耐心等待...", originalBtnHTML);
             if(text) {
                 analysisRawText = text;
                 renderMarkdownToCards(text, 'output');
@@ -647,7 +771,7 @@
         const btn = document.querySelector("#tab-gray button");
         
         try {
-            const text = await callGemini(PROMPTS.gray.replace('{stats}', stats), btn, "评估光影中...", "提取灰阶直方图与光影报告");
+            const text = await callAPI(PROMPTS.gray.replace('{stats}', stats), btn, "评估光影中...", "提取灰阶直方图与光影报告");
             if(text) renderMarkdownToCards(text, 'gray-output', uiPanel);
         } catch(err) { outDiv.innerHTML = `<div class="bg-rose-900/50 text-rose-300 p-4 rounded-lg border border-rose-800">❌ ${err.message}</div>`; }
     }
@@ -785,7 +909,7 @@
         const btn = document.querySelector("#tab-color button");
         
         try {
-            const text = await callGemini(PROMPTS.color.replace('{stats}', `暖${wp}%, 冷${cp}%, 中性${np}%, 画面前五主色十六进制: ${top5Hexes}`), btn, "诊断光谱中...", "光谱提取与色彩心理学诊断");
+            const text = await callAPI(PROMPTS.color.replace('{stats}', `暖${wp}%, 冷${cp}%, 中性${np}%, 画面前五主色十六进制: ${top5Hexes}`), btn, "诊断光谱中...", "光谱提取与色彩心理学诊断");
             if(text) renderMarkdownToCards(text, 'color-output');
         } catch(err) { outDiv.innerHTML = `<div class="bg-rose-900/50 text-rose-300 p-4 rounded-lg border border-rose-800">❌ ${err.message}</div>`; }
     }
@@ -1039,7 +1163,7 @@
         if (!isImgGen) {
             outDiv.innerHTML = '<div class="h-full flex items-center justify-center text-slate-400"><div class="loader"></div> 正在生成推演指导方案...</div>';
             try {
-                const text = await callGemini(prompt, e.target, "生成指导方案...", "2. 执行重构推演");
+                const text = await callAPI(prompt, e.target, "生成指导方案...", "2. 执行重构推演");
                 if(text) renderMarkdownToCards(text, 'edit-output');
             } catch(err) { outDiv.innerHTML = `<div class="bg-rose-900/50 text-rose-300 p-4 rounded-lg border border-rose-800">❌ ${err.message}</div>`; }
         } else {
